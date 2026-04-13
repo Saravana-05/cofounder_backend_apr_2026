@@ -45,6 +45,31 @@ async def get_ai_recommendation(request: RecommendationRequest):
             "Focus on cofounders with fintech or SaaS experience based on your domain"
         ]
     }
+@router.post("/recommendation")
+async def get_ai_recommendation(request: RecommendationRequest):
+    """
+    AI-powered cofounder recommendation.
+    
+    TODO: Integrate ChatGPT API:
+    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    response = await client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a startup cofounder matchmaking expert..."},
+            {"role": "user", "content": f"Based on user profile {request.user_id}, recommend..."}
+        ]
+    )
+    """
+    return {
+        "message": "AI recommendations coming soon",
+        "placeholder": True,
+        "user_id": request.user_id,
+        "recommendations": [
+            "Consider a technical cofounder with ML expertise to complement your business skills",
+            "Your SYNAPSE profile suggests you work well with analytical personalities",
+            "Focus on cofounders with fintech or SaaS experience based on your domain"
+        ]
+    }
 
 @router.post("/improve-profile")
 async def improve_profile(request: ProfileImprovementRequest):

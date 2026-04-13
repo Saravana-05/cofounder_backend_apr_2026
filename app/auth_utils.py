@@ -7,15 +7,21 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 import app.models as models
 from app.config import settings
+import hashlib        # ADD
+import base64         # ADD
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+def _prehash(password: str) -> str:         # ADD
+    digest = hashlib.sha256(password.encode("utf-8")).digest()
+    return base64.b64encode(digest).decode("utf-8")  # always 44 chars
+
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(_prehash(password))      # CHANGED
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return pwd_context.verify(_prehash(plain), hashed)  # CHANGED
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(days=7)) -> str:
     to_encode = data.copy()
