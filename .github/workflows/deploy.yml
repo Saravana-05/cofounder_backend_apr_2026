@@ -25,12 +25,18 @@ jobs:
           cd /home/ubuntu/cofounder_backend_apr_2026
 
           echo "📥 Fetching latest code..."
-          git fetch origin
+          git fetch origin dev
           git checkout dev
           git reset --hard origin/dev
 
+          echo "📌 Current commit:"
+          git log -1
+
           echo "🐍 Activating virtualenv..."
           source venv/bin/activate
+
+          echo "⬆️ Upgrading pip..."
+          pip install --upgrade pip
 
           echo "📦 Installing dependencies..."
           pip install -r requirements.txt
@@ -39,5 +45,8 @@ jobs:
           sudo systemctl daemon-reexec
           sudo systemctl daemon-reload
           sudo systemctl restart fastapi
+
+          echo "📊 Service status:"
+          sudo systemctl status fastapi --no-pager
 
           echo "✅ Deployment Successful"
