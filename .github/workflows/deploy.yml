@@ -20,7 +20,7 @@ jobs:
           cd /home/ubuntu/cofounder_backend_apr_2026
 
           echo "Pulling latest code..."
-          git pull origin main
+          git pull origin dev
 
           echo "Activating virtualenv..."
           source venv/bin/activate
