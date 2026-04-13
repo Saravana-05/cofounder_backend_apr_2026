@@ -62,6 +62,7 @@ async def get_ai_recommendation(request: RecommendationRequest):
     """
     return {
         "message": "AI recommendations coming soon",
+        "message": "AI recommendations coming soon",
         "placeholder": True,
         "user_id": request.user_id,
         "recommendations": [
