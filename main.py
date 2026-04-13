@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, profile, preferences, synapse, matches, ai
+from app.routers import auth, profile, preferences, synapse, matches, ai, connect  # ← add connect
 from app.database import engine, Base
 from mangum import Mangum
 
-# Create all tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -21,12 +20,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-app.include_router(profile.router, prefix="/profile", tags=["Profile"])
-app.include_router(preferences.router, prefix="/preferences", tags=["Preferences"])
-app.include_router(synapse.router, prefix="/synapse-test", tags=["Synapse Test"])
-app.include_router(matches.router, prefix="/matches", tags=["Matches"])
-app.include_router(ai.router, prefix="/ai", tags=["AI Integration"])
+app.include_router(auth.router,        prefix="/auth",         tags=["Authentication"])
+app.include_router(profile.router,     prefix="/profile",      tags=["Profile"])
+app.include_router(preferences.router, prefix="/preferences",  tags=["Preferences"])
+app.include_router(synapse.router,     prefix="/synapse-test", tags=["Synapse Test"])
+app.include_router(matches.router,     prefix="/matches",      tags=["Matches"])
+app.include_router(ai.router,          prefix="/ai",           tags=["AI Integration"])
+app.include_router(connect.router)     # ← add this (prefix="/connect" is already in the router)
 
 @app.get("/")
 async def root():
@@ -35,5 +35,5 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
-# Lambda handler
+
 handler = Mangum(app)

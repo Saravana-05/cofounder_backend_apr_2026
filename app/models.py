@@ -79,3 +79,38 @@ class Match(Base):
     style_score = Column(Float, default=0.0)
     status = Column(String, default="pending")  # pending, connected, rejected
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Connection(Base):
+    """
+    Tracks the state of a connect request between two users.
+    sender_id  → the user who clicked "Connect"
+    receiver_id → the user who received the request
+    status: pending | accepted | rejected
+    """
+    __tablename__ = "connections"
+ 
+    id          = Column(Integer, primary_key=True, index=True)
+    sender_id   = Column(Integer, ForeignKey("users.id"), nullable=False)
+    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status      = Column(String, default="pending")   # pending | accepted | rejected
+    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at  = Column(DateTime(timezone=True), onupdate=func.now())
+ 
+    sender   = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
+    messages = relationship("ChatMessage", back_populates="connection", cascade="all, delete-orphan")
+ 
+ 
+class ChatMessage(Base):
+    """One chat message inside an accepted connection thread."""
+    __tablename__ = "chat_messages"
+ 
+    id            = Column(Integer, primary_key=True, index=True)
+    connection_id = Column(Integer, ForeignKey("connections.id"), nullable=False)
+    sender_id     = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content       = Column(Text, nullable=False)
+    is_read       = Column(Boolean, default=False)
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
+ 
+    connection = relationship("Connection", back_populates="messages")
+    sender     = relationship("User", foreign_keys=[sender_id])
