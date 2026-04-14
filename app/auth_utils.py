@@ -17,11 +17,13 @@ def _prehash(password: str) -> str:         # ADD
     digest = hashlib.sha256(password.encode("utf-8")).digest()
     return base64.b64encode(digest).decode("utf-8")  # always 44 chars
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(_prehash(password))      # CHANGED
+def get_password_hash(password: str):
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    return pwd_context.hash(hashed)      # CHANGED
 
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(_prehash(plain), hashed)  # CHANGED
+def verify_password(plain_password: str, hashed_password: str):
+    hashed = hashlib.sha256(plain_password.encode()).hexdigest()
+    return pwd_context.verify(hashed, hashed_password)  # CHANGED
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(days=7)) -> str:
     to_encode = data.copy()
