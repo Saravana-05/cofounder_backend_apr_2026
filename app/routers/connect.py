@@ -74,7 +74,6 @@ class _ConnectionManager:
     """Holds active WebSocket connections keyed by connection_id → {user_id: ws}."""
 
     def __init__(self) -> None:
-        # { connection_id: { user_id: WebSocket } }
         self._rooms: dict[int, dict[int, WebSocket]] = {}
 
     async def join(self, connection_id: int, user_id: int, ws: WebSocket) -> None:
@@ -90,7 +89,6 @@ class _ConnectionManager:
         logger.info("WS left  room=%s user=%s", connection_id, user_id)
 
     async def broadcast(self, connection_id: int, payload: dict[str, Any]) -> None:
-        """Send JSON payload to every socket in the room."""
         room = self._rooms.get(connection_id, {})
         dead: list[int] = []
         for uid, ws in room.items():
@@ -139,12 +137,18 @@ def send_connect_request(
     if receiver_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot connect with yourself")
 
-    # Prevent duplicate requests
+    # ── Bidirectional duplicate check (A→B and B→A) ──
     existing = (
         db.query(models.Connection)
         .filter(
-            models.Connection.sender_id == current_user.id,
-            models.Connection.receiver_id == receiver_id,
+            (
+                (models.Connection.sender_id == current_user.id) &
+                (models.Connection.receiver_id == receiver_id)
+            ) |
+            (
+                (models.Connection.sender_id == receiver_id) &
+                (models.Connection.receiver_id == current_user.id)
+            )
         )
         .first()
     )
@@ -160,7 +164,6 @@ def send_connect_request(
     db.commit()
     db.refresh(conn)
 
-    # Look up match score for the email
     match_row = (
         db.query(models.Match)
         .filter(models.Match.user_id == current_user.id, models.Match.matched_user_id == receiver_id)
@@ -171,7 +174,6 @@ def send_connect_request(
     sender_name   = _get_profile_name(current_user.id, db)
     receiver_name = _get_profile_name(receiver_id, db)
 
-    # Send email in background so the request returns immediately
     background_tasks.add_task(
         send_connect_request_email,
         to_email=receiver.email,
@@ -268,7 +270,6 @@ def get_messages(
         .all()
     )
 
-    # Mark unread messages as read
     for m in messages:
         if m.sender_id != current_user.id and not m.is_read:
             m.is_read = True
@@ -301,12 +302,9 @@ async def send_message_rest(
 async def chat_websocket(
     connection_id: int,
     websocket: WebSocket,
-    token: str,                       # passed as ?token=<jwt> query param
+    token: str,
     db: Session = Depends(get_db),
 ):
-    # Authenticate via token query param (browsers can't set WS headers)
-    from app.auth_utils import get_current_user as _auth
-    from fastapi.security import OAuth2PasswordBearer
     from jose import jwt, JWTError
 
     try:
@@ -330,7 +328,6 @@ async def chat_websocket(
 
     await manager.join(connection_id, current_user.id, websocket)
 
-    # Notify the room that this user is online
     await manager.broadcast(connection_id, {
         "type": "presence",
         "user_id": current_user.id,
@@ -370,14 +367,11 @@ async def chat_websocket(
                 }
                 await manager.broadcast(connection_id, payload_out)
 
-                # Email notification only if the other user is NOT in the room
                 other_id = conn.receiver_id if conn.sender_id == current_user.id else conn.sender_id
                 if other_id not in manager.online_users(connection_id):
                     other_user = db.query(models.User).filter(models.User.id == other_id).first()
                     other_name = _get_profile_name(other_id, db)
                     if other_user:
-                        from fastapi import BackgroundTasks as BT
-                        # Fire-and-forget in the same event loop
                         import asyncio
                         asyncio.get_event_loop().run_in_executor(
                             None,
@@ -391,7 +385,6 @@ async def chat_websocket(
                         )
 
             elif data.get("type") == "read":
-                # Mark messages as read
                 db.query(models.ChatMessage).filter(
                     models.ChatMessage.connection_id == connection_id,
                     models.ChatMessage.sender_id != current_user.id,
